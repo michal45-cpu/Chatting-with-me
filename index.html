@@ -2,117 +2,88 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Chat App</title>
+<title>Firebase Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Firebase (NO MODULES) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <style>
-body {
-  margin: 0;
-  font-family: system-ui, Arial;
-  background: #0b141a;
+body{
+  margin:0;
+  font-family:Arial;
+  background:#e5ddd5;
 }
-
-/* LOGIN */
-   #login {
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #075e54;
+#login,#chat{
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
 }
-#loginBox {
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  width: 90%;
-  max-width: 300px;
+.box{
+  background:white;
+  padding:20px;
+  width:320px;
+  border-radius:8px;
 }
-#loginBox input {
-  width: 90%;
-  padding: 15px;
-  margin: 8px 0;
+input,button{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
 }
-#loginBox button {
-  width: 100%;
-  padding: 15px;
-  background: #075e54;
-  color: white;
-  border: none;
+#chat{
+  display:none;
+  flex-direction:column;
 }
-
-/* CHAT */
-#chat {
-  display: none;
-  height: 100vh;
-  max-width: 500px;
-  margin: auto;
-  background: #efeae2;
-  flex-direction: column;
+.header{
+  background:#075e54;
+  color:white;
+  padding:12px;
+  text-align:center;
 }
-
-#header {
-  background: #075e54;
-  color: white;
-  padding: 12px;
-  text-align: center;
-  font-weight: bold;
+#messages{
+  flex:1;
+  overflow-y:auto;
+  padding:10px;
 }
-
-#messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px;
+.msg{
+  max-width:70%;
+  padding:8px;
+  margin:6px 0;
+  border-radius:6px;
 }
-
-.msg {
-  padding: 8px 12px;
-  margin: 6px 0;
-  max-width: 75%;
-  border-radius: 10px;
-  font-size: 14px;
+.me{
+  background:#dcf8c6;
+  margin-left:auto;
 }
-
-.me {
-  background: #dcf8c6;
-  margin-left: auto;
+.other{
+  background:white;
+  margin-right:auto;
 }
-
-.other {
-  background: white;
-  margin-right: auto;
+.user{
+  font-size:11px;
+  color:#555;
 }
-
-.time {
-  font-size: 10px;
-  opacity: 0.6;
-  text-align: right;
+.delete{
+  font-size:10px;
+  color:red;
+  cursor:pointer;
 }
-
-/* INPUT */
-#input {
-  display: flex;
-  padding: 8px;
-  background: #f0f0f0;
+.input{
+  display:flex;
+  padding:10px;
+  background:#f0f0f0;
 }
-
-#text {
-  flex: 1;
-  padding: 10px;
-  border-radius: 20px;
-  border: none;
+.input input{
+  flex:1;
 }
-
-#emoji {
-  font-size: 20px;
-  background: none;
-  border: none;
-}
-
-#send {
-  background: #075e54;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 40px;
+.input button{
+  width:60px;
+  background:#25d366;
+  color:white;
+  border:none;
 }
 </style>
 </head>
@@ -121,8 +92,9 @@ body {
 
 <!-- LOGIN -->
 <div id="login">
-  <div id="loginBox">
+  <div class="box">
     <h3>Login</h3>
+    <input id="username" placeholder="Username">
     <input id="email" placeholder="Email">
     <input id="password" type="password" placeholder="Password">
     <button onclick="login()">Login</button>
@@ -131,93 +103,82 @@ body {
 
 <!-- CHAT -->
 <div id="chat">
-  <div id="header">Chat</div>
-
+  <div class="header">Chat Room</div>
   <div id="messages"></div>
-
-  <div id="input">
-    <button id="emoji" onclick="addEmoji()">😊</button>
-    <input id="text" placeholder="Message">
-    <button id="send" onclick="send()">➤</button>
+  <div class="input">
+    <input id="msg">
+    <button onclick="sendMsg()">Send</button>
   </div>
 </div>
 
-<!-- FIREBASE -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
 <script>
-const firebaseConfig = {
+/* 🔥 FIREBASE CONFIG */
+firebase.initializeApp({
   apiKey: "AIzaSyD-kvDCmugkiKK5p-pgWYXGhpuCySrFW7w",
   authDomain: "fevorite-things.firebaseapp.com",
   projectId: "fevorite-things",
   storageBucket: "fevorite-things.firebasestorage.app",
   messagingSenderId: "107020931792",
-  appId: "1:107020931792:web:9560925a6b2f733aea44d5",
-  measurementId: "G-8R2W1MS503"
-};
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-/* LOGIN */
-function login() {
-  auth.signInWithEmailAndPassword(
-    email.value,
-    password.value
-  ).catch(e => alert(e.message));
-}
-
-auth.onAuthStateChanged(user => {
-  if (user) {
-    login.style.display = "none";
-    chat.style.display = "flex";
-    header.innerText = user.email;
-    loadMessages();
-  }
 });
 
-/* LOAD MESSAGES */
-function loadMessages() {
-  db.collection("chat")
-    .orderBy("time")
-    .onSnapshot(snap => {
-      messages.innerHTML = "";
-      snap.forEach(doc => {
-        const m = doc.data();
-        const div = document.createElement("div");
-        div.className = "msg " + (m.uid === auth.currentUser.uid ? "me" : "other");
+var auth = firebase.auth();
+var db = firebase.firestore();
+var currentUser = "";
 
-        const time = m.time
-          ? m.time.toDate().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
-          : "";
+/* LOGIN */
+function login(){
+  currentUser = document.getElementById("username").value;
 
-        div.innerHTML = ${m.text}<div class="time">${time}</div>;
-        messages.appendChild(div);
-        messages.scrollTop = messages.scrollHeight;
-      });
-    });
+  auth.signInWithEmailAndPassword(
+    document.getElementById("email").value,
+    document.getElementById("password").value
+  )
+  .then(function(){
+    document.getElementById("login").style.display = "none";
+    document.getElementById("chat").style.display = "flex";
+    loadMsgs();
+  })
+  .catch(function(e){
+    alert(e.message);
+  });
 }
 
 /* SEND */
-function send() {
-  if (!text.value) return;
-
-  db.collection("chat").add({
-    text: text.value,
-    uid: auth.currentUser.uid,
-    time: firebase.firestore.FieldValue.serverTimestamp()
-  });
-  text.value = "";
+function sendMsg(){
+  if(!document.getElementById("msg").value) return;
+db.collection("messages").add({
+  text: document.getElementById("msg").value,
+  user: currentUser,
+  time: firebase.firestore.FieldValue.serverTimestamp()
+});
+document.getElementById("msg").value="";
 }
 
-/* EMOJI */
-function addEmoji() {
-  text.value += "😊";
+/* LOAD */
+function loadMsgs(){
+  db.collection("messages").orderBy("time")
+  .onSnapshot(function(snap){
+    messages.innerHTML="";
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var div=document.createElement("div");
+      div.className="msg "+(d.user===currentUser?"me":"other");
+      div.innerHTML=
+        "<div class='user'>"+d.user+"</div>"+
+        d.text+
+        (d.user===currentUser?
+        "<div class='delete' onclick=\"del('"+doc.id+"')\">delete</div>":"");
+      messages.appendChild(div);
+    });
+    messages.scrollTop=messages.scrollHeight;
+  });
+}
+
+/* DELETE */
+function del(id){
+  db.collection("messages").doc(id).delete();
 }
 </script>
 
 </body>
-  </html>
+</html>
