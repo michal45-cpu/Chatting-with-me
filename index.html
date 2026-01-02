@@ -2,66 +2,147 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Simple Chat</title>
+<title>Chat App</title>
 
 <style>
 body {
-  font-family: Arial;
-  background: #ece5dd;
   margin: 0;
+  font-family: system-ui, Arial;
+  background: #0b141a;
 }
-#chat {
-  max-width: 600px;
-  margin: auto;
+
+/* LOGIN */
+   #login {
   height: 100vh;
   display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #075e54;
+}
+#loginBox {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 300px;
+}
+#loginBox input {
+  width: 90%;
+  padding: 15px;
+  margin: 8px 0;
+}
+#loginBox button {
+  width: 100%;
+  padding: 15px;
+  background: #075e54;
+  color: white;
+  border: none;
+}
+
+/* CHAT */
+#chat {
+  display: none;
+  height: 100vh;
+  max-width: 500px;
+  margin: auto;
+  background: #efeae2;
   flex-direction: column;
 }
+
+#header {
+  background: #075e54;
+  color: white;
+  padding: 12px;
+  text-align: center;
+  font-weight: bold;
+}
+
 #messages {
   flex: 1;
   overflow-y: auto;
   padding: 10px;
 }
+
 .msg {
-  margin: 5px;
   padding: 8px 12px;
+  margin: 6px 0;
+  max-width: 75%;
   border-radius: 10px;
-  max-width: 70%;
+  font-size: 14px;
 }
+
 .me {
   background: #dcf8c6;
   margin-left: auto;
 }
+
 .other {
   background: white;
+  margin-right: auto;
 }
+
+.time {
+  font-size: 10px;
+  opacity: 0.6;
+  text-align: right;
+}
+
+/* INPUT */
 #input {
   display: flex;
-  padding: 10px;
+  padding: 8px;
   background: #f0f0f0;
 }
-input {
+
+#text {
   flex: 1;
-  padding: 8px;
+  padding: 10px;
+  border-radius: 20px;
+  border: none;
 }
-button {
-  padding: 8px 12px;
+
+#emoji {
+  font-size: 20px;
+  background: none;
+  border: none;
+}
+
+#send {
+  background: #075e54;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
 }
 </style>
 </head>
 
 <body>
 
-<div id="chat">
-  <div id="messages"></div>
-
-  <div id="input">
-    <input id="text" placeholder="Type message..." />
-    <button onclick="send()">Send</button>
+<!-- LOGIN -->
+<div id="login">
+  <div id="loginBox">
+    <h3>Login</h3>
+    <input id="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="login()">Login</button>
   </div>
 </div>
 
-<!-- Firebase -->
+<!-- CHAT -->
+<div id="chat">
+  <div id="header">Chat</div>
+
+  <div id="messages"></div>
+
+  <div id="input">
+    <button id="emoji" onclick="addEmoji()">😊</button>
+    <input id="text" placeholder="Message">
+    <button id="send" onclick="send()">➤</button>
+  </div>
+</div>
+
+<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -81,38 +162,62 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// AUTO LOGIN (TEMP)
-auth.signInWithEmailAndPassword("utkarshdixit400@gmail.com", "kaushiki");
+/* LOGIN */
+function login() {
+  auth.signInWithEmailAndPassword(
+    email.value,
+    password.value
+  ).catch(e => alert(e.message));
+}
 
-// LISTEN MESSAGES
-db.collection("chat").orderBy("time")
-.onSnapshot(snap => {
-  messages.innerHTML = "";
-  snap.forEach(doc => {
-    const m = doc.data();
-    const div = document.createElement("div");
-    div.className = "msg " + (m.uid === auth.currentUser.uid ? "me" : "other");
-    div.textContent = m.text;
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;
-  });
+auth.onAuthStateChanged(user => {
+  if (user) {
+    login.style.display = "none";
+    chat.style.display = "flex";
+    header.innerText = user.email;
+    loadMessages();
+  }
 });
 
-// SEND MESSAGE
+/* LOAD MESSAGES */
+function loadMessages() {
+  db.collection("chat")
+    .orderBy("time")
+    .onSnapshot(snap => {
+      messages.innerHTML = "";
+      snap.forEach(doc => {
+        const m = doc.data();
+        const div = document.createElement("div");
+        div.className = "msg " + (m.uid === auth.currentUser.uid ? "me" : "other");
+
+        const time = m.time
+          ? m.time.toDate().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+          : "";
+
+        div.innerHTML = ${m.text}<div class="time">${time}</div>;
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+      });
+    });
+}
+
+/* SEND */
 function send() {
-  const t = text.value;
-  if (!t) return;
+  if (!text.value) return;
 
   db.collection("chat").add({
-    text: t,
+    text: text.value,
     uid: auth.currentUser.uid,
     time: firebase.firestore.FieldValue.serverTimestamp()
   });
-
   text.value = "";
+}
+
+/* EMOJI */
+function addEmoji() {
+  text.value += "😊";
 }
 </script>
 
 </body>
-
-</html>
+  </html>
